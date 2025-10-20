@@ -37,7 +37,7 @@ AUTHOR: Basil L. Contovounesios and Tsung-Han Liu
 
 ## Installation
 
-_dvar-track_ Lisp analysis depends on Emacs 30+ and (dash)[https://github.com/magnars/dash.el].
+_dvar-track_ Lisp analysis depends on Emacs 30+ and [dash](https://github.com/magnars/dash.el).
 Dash can be installed with the build-in package manager of Emacs.
 
     M-x package-install RET dash RET
@@ -50,6 +50,7 @@ Add the directory containing *dvar-track* source code to the load path of Emacs.
 ```
 
 > Testing _dvar-track_ does not requires C analysis.
+> For the procedure to do C analysis, please check the [C analysis](#c-analysis) section.
 
 ## Usage
 
@@ -74,14 +75,14 @@ the target function.
 
 ### dvar-eldoc
 
-*dvar-eldoc* is a on-the-fly missing binding checking (eldoc)[https://www.gnu.org/software/emacs/manual/html_node/emacs/Programming-Language-Doc.html] backend.
+*dvar-eldoc* is a on-the-fly missing binding checking [eldoc](https://www.gnu.org/software/emacs/manual/html_node/emacs/Programming-Language-Doc.html) backend.
 
 ``` emacs-lisp
 (require 'dvar-eldoc)
 ```
 
 
-To have the dependency information of the function the library you use, scan it beforehanded.
+To have the dependency information of the function the library you use, scan it beforehand.
 
     M-x dvar-track--scan-files-directory <path-to-ELPA or path-to-library>
     M-x dvar-track--toggle-eldoc
@@ -109,3 +110,78 @@ Set `dvar-doc-automatically-parse` to non-nil, force _dvar-track_ to parse the f
 
 ![docstring](./images/docstring-overlay.png "Docstring Annotation")
 ![helpbuffer](./images/help-annotation.png "Help Annotation")
+
+# C Analysis
+
+## Preparation
+
+Clone submodules, use `--depth=1` to save time.
+
+``` shell
+git submodule update --depth=1 --init
+```
+
+Prepare for a Emacs compilation environment, we tested the patch with `emacs-builder/Containerfile`.
+
+## Apply Patches
+
+Install the patches
+
+``` shell
+cd emacs-patch
+find . -type f -exec cp {} ../emacs/{} \;
+cd ..
+```
+
+Configure Emacs and generate `globals.h` for the second phase patches.
+
+``` shell
+cd emacs
+./autogen.sh
+./configure --with-native-compilation=no
+cd src
+touch dvar-func.c # create a dummy file, so that make does not block the compilation
+make globals.h
+cd ../../
+```
+
+## Generate Indirect Access Functions & Compile Patched Emacs
+
+Compile C grammar module and the global variable parser.
+
+``` shell
+cd treesit/tree-sitter-c
+make
+cd ..
+make
+cd ..
+```
+
+Generate indirect access functions and compile patched Emacs.
+
+``` shell
+cd emacs
+../treesit/global_parser -t $(pwd)
+cd src
+../../treesit/applyupdate.sh # rewrite all &Vvarname literals
+make # compile Emacs
+```
+
+## Test Variable Access Interception
+
+Launch Emacs and open a scratch buffer.
+
+``` emacs-lisp
+(let ((dvar-log-variable-access t))
+  (prin1 '(a b c)))
+  
+(gethash #'prin1 dvar-function-dependency)
+```
+
+Evaluate the code you can see something like:
+
+```
+#s(hash-table test equal data ("f_debug_on_next_call" t "f_symbols_with_pos_enabled" t "f_Vquit_flag" t "f_max_lisp_eval_depth" t "f_Vinternal_interpreter_environment" t "f_Vstandard_output" t "f_unibyte_display_via_language_environment" t "f_minibuffer_auto_raise" t "f_Vprint_continuous_numbering" t "f_Vprint_number_table" t "f_Vprint_circle" t "f_Vprint_level" t ...))
+```
+
+The strings are the C name of the intercepted dependencies of `prin1`.
