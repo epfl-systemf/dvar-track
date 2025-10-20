@@ -1,0 +1,24 @@
+FROM docker.io/debian:12.9
+
+RUN echo "deb http://debian.ethz.ch/debian stable main contrib" > /etc/apt/sources.list
+RUN echo "deb-src http://debian.ethz.ch/debian stable main contrib" >> /etc/apt/sources.list
+
+RUN apt-get update && \
+    apt-get install -y \
+            autoconf \
+            make \
+            clang-19 \
+            texinfo && \
+    apt-get build-dep -y emacs
+
+RUN apt-get install -y \
+            nano \
+            openssh-server \
+            clangd-19 \
+            iproute2            
+
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-19 100 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-19 100 && \
+    update-alternatives --install /usr/bin/clangd clangd /usr/bin/clangd-19 100
+
+RUN echo "PermitRootLogin prohibit-password" > /etc/ssh/sshd_config.d/rootlogin.conf

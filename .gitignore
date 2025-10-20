@@ -1,0 +1,27 @@
+# Emacs
+*.elc
+.dir-locals-2.el
+\#*\#
+
+# LaTeX artefacts
+*.log
+*.aux
+*.out
+_minted-*/
+
+# BibLaTeX/Biber artefacts
+*.bbl
+*.bcf
+*.blg
+*.run.xml
+
+# Latexmk artefacts
+*.fdb_latexmk
+*.fls
+
+# AUCTeX artefacts
+auto/
+
+# known binary artefacts
+fileio.o
+globals_parser

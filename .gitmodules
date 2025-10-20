@@ -1,0 +1,6 @@
+[submodule "treesit/tree-sitter-c"]
+	path = treesit/tree-sitter-c
+	url = https://github.com/tree-sitter/tree-sitter-c.git
+[submodule "emacs"]
+	path = emacs
+	url = https://github.com/emacs-mirror/emacs.git
