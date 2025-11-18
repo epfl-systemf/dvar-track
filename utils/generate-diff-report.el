@@ -1,0 +1,56 @@
+(defvar record2024 nil)
+(defvar record2025 nil)
+(defvar recorddiff nil)
+
+(setq record2024 (dvar-track--load-record "~/epfl/github-dvar-track/utils/transient-20240629.1508.el")
+      record2025 (dvar-track--load-record "~/epfl/github-dvar-track/utils/transient-20251020.1535.el"))
+
+(setq recorddiff (dvar-track--depdiff record2024 record2025))
+
+(car (--filter (not (equal (cdr it) '(nil nil))) recorddiff))
+
+(pcase '(1 2 . 3)
+  (`(,a ,b ,c) (message "%S %S %S" a b c))
+  (t (message "no match")))
+
+(defun make-hash-table-from-alist (alst)
+  (let ((ht (make-hash-table :test #'eq :size (length alst))))
+    (dolist (itm alst)
+      (puthash (car itm) (cdr itm) ht))
+    ht
+    ))
+
+(defvar record2025ht (make-hash-table-from-alist record2025))
+
+(with-current-buffer-window "*Report Transient*" nil nil
+  (pcase-dolist (`(,func ,new-deps ,old-deps)
+		 (--filter (not (null (cadr it))) recorddiff)
+		 ;; (--filter (not (equal (cdr it) '(nil nil))) recorddiff)
+		 )
+    (insert (format "* %S\n" func))
+    ;; (insert "** new-deps\n") 
+    (pcase-dolist (`(,dep . ,acenstors) new-deps)
+      (insert (symbol-name dep) ": ")
+      (let* ((acenstor (car acenstors))
+	     (acname (symbol-name acenstor))
+	     (predecesor func)
+	     )
+	(insert acname)
+	(while (and (not (eq acenstor predecesor))
+		    (string-prefix-p "transient" acname))
+	  (setq predecesor acenstor)
+	  (setq acenstor (car (cdr (assq dep (gethash acenstor record2025ht)))))
+	  (setq acname (symbol-name acenstor))
+	  (unless (eq predecesor acenstor) (insert " " acname))
+	  ))
+      (insert "\n")
+      )
+    ;; (insert "** old-deps\n")
+    ;; (dolist (dep old-deps)
+    ;;  (insert (symbol-name dep) "\n")))
+    )
+  (outline-mode)
+  )
+
+(alist-get 'transient--current-suffix (gethash 'transient--do-quit-one record2025ht))
+(gethash 'transient-setup record2025ht)

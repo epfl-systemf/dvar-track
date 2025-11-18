@@ -1,0 +1,6 @@
+(let ((package-dir (getenv "PKG_DIR"))
+      (record-file (getenv "RECORD_FILE"))
+      (record-scc-file (getenv "RECORD_SCC_FILE")))
+  (dvar-track--scan-files-in-directory package-dir "/dev/null")
+  (dvar-track--dump-dependencies record-file record-scc-file))
+(kill-emacs)
